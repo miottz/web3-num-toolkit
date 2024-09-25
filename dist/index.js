@@ -1,3 +1,5 @@
+import BigNumber from 'bignumber.js';
+
 const _convertScientificToNumberString = (num) => {
     if (!String(num).includes('e'))
         return String(num);
@@ -106,7 +108,7 @@ c.数据大于等于1亿：使用亿为单位处理数字
  * @return {*}
  */
 function formatVolumeDecimalsZh(value) {
-    let number = Number(value || 0);
+    let number = Number(value) || 0;
     const units = ['', '万', '亿'];
     let unitIndex = 0;
     while (Math.abs(number) >= 10000 && unitIndex < units.length - 1) {
@@ -134,9 +136,9 @@ a.数据大于等于100.0%：小数点后显示1位数字，小数点不足使�
  * @return {*}
  */
 function formatPercentageDecimals(value) {
-    const num = Number(value || 0);
+    const num = Number(value) || 0;
     if (num < 0.01) {
-        return '0';
+        return '-';
     }
     else if (num < 100) {
         return num.toFixed(2);
@@ -209,13 +211,102 @@ function formatVolumeIntZh(value) {
         return `${Math.round(num / 100000000)}亿+`; // 数据大于等于1亿，取整，以亿为单位显示
     }
 }
+/**
+ * @description: 小数折叠0的个数后展示，如0.000000009123 =>0.0{9}123
+ * @param {number} value
+ * @param {number} foldingBoundary
+ * @return {*}
+ */
+function formatMinimumDecimals(value, foldingBoundary = 4) {
+    var _a, _b;
+    if (!Number(value)) {
+        return '0';
+    }
+    const strValue = typeof value === 'number' ? value.toString() : value.trim();
+    let [integerPart, decimalPart = ''] = strValue.split('.');
+    if (strValue.includes('e')) {
+        // 如果出现科学记数法，则强制转换为不使用科学记数法的形式
+        integerPart = _convertScientificToNumberString(Number(strValue)).split('.')[0];
+        decimalPart =
+            (_a = _convertScientificToNumberString(Number(strValue)).split('.')[1]) !== null && _a !== void 0 ? _a : _convertScientificToNumberString(Number(strValue)).split('.')[0];
+    }
+    const zeroCount = ((_b = decimalPart.match(/^0+/)) === null || _b === void 0 ? void 0 : _b[0].length) || 0;
+    const endPart = decimalPart.slice(zeroCount); // 获取所有有效数字
+    if (zeroCount >= foldingBoundary) {
+        // 小数部分0的个数 > 折叠边界，按照指定格式展示
+        return `${integerPart}.0{${zeroCount}}${endPart}`;
+    }
+    return `${integerPart}${decimalPart ? `.${decimalPart}` : ''}`; // 如果值大于等于1，直接返回原值
+}
+/**
+ * @description: 将小数值转换为固定精度的整数
+ * @param {string | number} value - 要转换的小数值
+ * @param {number} precision - 小数位数（默认为18位）
+ * @return {string} - 转换后的整数值（字符串形式）
+ */
+function fixedToInt(value, precision = 18) {
+    if (value === null || value === undefined) {
+        throw new Error('Invalid number');
+    }
+    const num = new BigNumber(value);
+    // 判断是否是有效数字
+    if (!num.isFinite()) {
+        throw new Error('Invalid number');
+    }
+    // 将数值乘以 10 的精度次方，并截断小数部分，避免科学记数法
+    return num
+        .multipliedBy(new BigNumber(10).pow(precision)) // 乘以 10 的精度次方
+        .integerValue(BigNumber.ROUND_DOWN) // 截断小数部分
+        .toFixed(0, BigNumber.ROUND_DOWN); // 避免科学记数法并返回字符串
+}
+/**
+ * @description: 将固定精度的整数转换为小数值
+ * @param {string | number} value - 要转换的整数值
+ * @param {number} precision - 小数位数（默认为18位）
+ * @return {string} - 转换后的小数值（字符串形式）
+ */
+function intoFixed(value, precision = 18) {
+    if (value === null || value === undefined) {
+        throw new Error('Invalid number');
+    }
+    const num = new BigNumber(value);
+    // 判断是否是有效数字
+    if (!num.isFinite()) {
+        throw new Error('Invalid number');
+    }
+    // 将整数转换为小数，除以 10 的精度次方
+    const divisor = new BigNumber(10).pow(precision);
+    const result = num.dividedBy(divisor).toFixed(precision);
+    // 去除末尾多余的0
+    return result.replace(/\.?0+$/, '');
+}
+/**
+ * @description: 格式化哈希，省略中间部分
+ * @param {string} hash
+ * @param {number} startLen
+ * @param {number} endLen
+ * @return {*}
+ */
+function formatHash(hash, startLen, endLen) {
+    if (!hash) {
+        return hash;
+    }
+    const start = startLen || 6;
+    const end = endLen || 2;
+    return `${hash.slice(0, start)}...${hash.slice(-end)}`;
+}
+/**
+ * @description: base64转hex
+ * @param {string} base64
+ * @return {*}
+ */
+function base64ToHex(base64) {
+    const binary = atob(base64);
+    let hex = '';
+    for (let i = 0; i < binary.length; i++) {
+        hex += ('0' + binary.charCodeAt(i).toString(16)).slice(-2);
+    }
+    return hex;
+}
 
-const add = (a, b) => a + b;
-const multiply = (a, b) => a * b;
-const percentage = (value, total) => {
-    if (total === 0)
-        return '-';
-    return ((value / total) * 100).toFixed(2) + '%';
-};
-
-export { _convertScientificToNumberString, _findFirstNonZeroIndex, add, formatPercentageDecimals, formatPriceDecimals, formatVolumeDecimals, formatVolumeDecimalsZh, formatVolumeInt, formatVolumeIntZh, multiply, percentage, thousandSeparatorNum };
+export { _convertScientificToNumberString, _findFirstNonZeroIndex, base64ToHex, fixedToInt, formatHash, formatMinimumDecimals, formatPercentageDecimals, formatPriceDecimals, formatVolumeDecimals, formatVolumeDecimalsZh, formatVolumeInt, formatVolumeIntZh, intoFixed, thousandSeparatorNum };

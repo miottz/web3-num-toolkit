@@ -92,3 +92,38 @@ d.数据大于等于1亿：取整，以亿为单位显示，例：982亿+"
  * @return {*}
  */
 export declare function formatVolumeIntZh(value: number | string): string;
+/**
+ * @description: 小数折叠0的个数后展示，如0.000000009123 =>0.0{9}123
+ * @param {number} value
+ * @param {number} foldingBoundary
+ * @return {*}
+ */
+export declare function formatMinimumDecimals(value: number | string, foldingBoundary?: number): string;
+/**
+ * @description: 将小数值转换为固定精度的整数
+ * @param {string | number} value - 要转换的小数值
+ * @param {number} precision - 小数位数（默认为18位）
+ * @return {string} - 转换后的整数值（字符串形式）
+ */
+export declare function fixedToInt(value: string | number, precision?: number): string;
+/**
+ * @description: 将固定精度的整数转换为小数值
+ * @param {string | number} value - 要转换的整数值
+ * @param {number} precision - 小数位数（默认为18位）
+ * @return {string} - 转换后的小数值（字符串形式）
+ */
+export declare function intoFixed(value: string | number, precision?: number): string;
+/**
+ * @description: 格式化哈希，省略中间部分
+ * @param {string} hash
+ * @param {number} startLen
+ * @param {number} endLen
+ * @return {*}
+ */
+export declare function formatHash(hash: string, startLen?: number, endLen?: number | null): string;
+/**
+ * @description: base64转hex
+ * @param {string} base64
+ * @return {*}
+ */
+export declare function base64ToHex(base64: string): string;
