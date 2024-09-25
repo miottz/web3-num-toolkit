@@ -1,17 +1,19 @@
 {
   "name": "web3-num-formatter",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "",
-  "main": "dist/index.cjs", 
+  "main": "dist/index.cjs",
   "module": "dist/index.js",
-  "types": "dist/index.d.ts", 
+  "types": "dist/index.d.ts",
   "type": "module",
   "files": [
     "dist"
   ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rollup -c"
+    "test": "jest",
+    "build": "pnpm run test && rollup -c",
+    "version": "npm run build && git add . && git commit -m 'chore: build for release'",
+    "postversion": "git tag v$(node -p \"require('./package.json').version\") && git push && git push --tags"
   },
   "keywords": [],
   "author": "",
