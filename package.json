@@ -1,6 +1,6 @@
 {
-  "name": "web3-num-formatter",
-  "version": "1.0.4",
+  "name": "web3-num-toolkit",
+  "version": "1.0.0",
   "description": "",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
