@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ES2020",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,  // 生成 .d.ts 文件
+    "outDir": "./dist",   // 输出目录
+    "rootDir": "./src"    // 输入目录
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "**/*.spec.ts","src/tests/**/*"]
+}
