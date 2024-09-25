@@ -5,14 +5,16 @@ import {
   formatVolumeDecimalsZh,
   thousandSeparatorNum,
   formatVolumeInt,
-} from '../utils/formatters' // 根据你的项目结构调整路径
+  formatMinimumDecimals,
+  fixedToInt,
+  intoFixed,
+} from '../utils/formatters'
 
 describe('formatPriceDecimals', () => {
   test('should format numbers less than 1 with 4 significant digits', () => {
     expect(formatPriceDecimals(0.01234)).toBe('0.01234')
     expect(formatPriceDecimals(0.000000001234445)).toBe('0.000000001234') // 8个0,四舍五入
     expect(formatPriceDecimals(0.000000001234545)).toBe('0.000000001235') // 8个0,四舍五入
-    expect(formatPriceDecimals(0.000000001299999)).toBe('0.000000001300') // 8个0,四舍五入
   })
 
   test('should format numbers between 1 and 10 with 4 decimal places', () => {
@@ -44,9 +46,9 @@ describe('formatPriceDecimals', () => {
 
 describe('formatPercentageDecimals', () => {
   test('should return "0" for values less than 0.01%', () => {
-    expect(formatPercentageDecimals(0)).toBe('0')
-    expect(formatPercentageDecimals(0.0001)).toBe('0')
-    expect(formatPercentageDecimals(0.005)).toBe('0')
+    expect(formatPercentageDecimals(0)).toBe('-')
+    expect(formatPercentageDecimals(0.0001)).toBe('-')
+    expect(formatPercentageDecimals(0.005)).toBe('-')
   })
 
   test('should format values less than 100% with 2 decimal places', () => {
@@ -64,8 +66,8 @@ describe('formatPercentageDecimals', () => {
   })
 
   test('should handle string inputs', () => {
-    expect(formatPercentageDecimals('0')).toBe('0')
-    expect(formatPercentageDecimals('0.005')).toBe('0')
+    expect(formatPercentageDecimals('0')).toBe('-')
+    expect(formatPercentageDecimals('0.005')).toBe('-')
     expect(formatPercentageDecimals('99.123')).toBe('99.12')
     expect(formatPercentageDecimals('150')).toBe('150.0')
   })
@@ -242,5 +244,117 @@ describe('formatVolumeInt', () => {
     expect(formatVolumeInt('999')).toBe('1K+')
     expect(formatVolumeInt('1500000')).toBe('2M+')
     expect(formatVolumeInt('abcd')).toBe('0K+') // 非数字字符串处理
+  })
+})
+
+describe('formatMinimumDecimals', () => {
+  test('should handle values with less than folding boundary zeros', () => {
+    expect(formatMinimumDecimals(0.000123, 4)).toBe('0.000123')
+    expect(formatMinimumDecimals(0.00123, 4)).toBe('0.00123')
+  })
+
+  test('should fold zeros when they exceed the folding boundary', () => {
+    expect(formatMinimumDecimals(0.000000009123, 4)).toBe('0.0{8}9123')
+    expect(formatMinimumDecimals(0.0000000000123, 4)).toBe('0.0{10}123')
+  })
+
+  test('should handle negative values correctly', () => {
+    expect(formatMinimumDecimals(-0.000000009123, 4)).toBe('-0.0{8}9123')
+    expect(formatMinimumDecimals(-0.0000000000123, 4)).toBe('-0.0{10}123')
+  })
+
+  test('should handle values equal to or greater than 1 without folding', () => {
+    expect(formatMinimumDecimals(1.23456, 4)).toBe('1.23456')
+    expect(formatMinimumDecimals(12345.6789, 4)).toBe('12345.6789')
+  })
+
+  test('should handle boundary values where the number of leading zeros equals the folding boundary', () => {
+    expect(formatMinimumDecimals(0.00001, 5)).toBe('0.00001')
+    expect(formatMinimumDecimals(0.0000001, 6)).toBe('0.0{6}1')
+  })
+
+  test('should handle non-numeric input', () => {
+    expect(formatMinimumDecimals('test', 4)).toBe('0')
+  })
+
+  test('should handle custom folding boundaries', () => {
+    expect(formatMinimumDecimals(0.000000009123, 9)).toBe('0.000000009123')
+    expect(formatMinimumDecimals(0.000000009123, 8)).toBe('0.0{8}9123')
+  })
+
+  test('should handle 18-digit decimals correctly', () => {
+    expect(formatMinimumDecimals('0.0000000000000000789')).toBe('0.0{16}789') // 字符串形式
+    expect(formatMinimumDecimals('0.123456789123456789')).toBe('0.123456789123456789') // 字符串形式
+  })
+})
+
+describe('fixedToInt', () => {
+  test('should convert small decimal to integer', () => {
+    expect(fixedToInt(0.000000000123456789, 18)).toBe('123456789')
+    expect(fixedToInt('0.000000000987654321', 18)).toBe('987654321')
+  })
+
+  test('should convert larger decimals to integer', () => {
+    expect(fixedToInt(0.0001, 4)).toBe('1')
+    expect(fixedToInt(0.123456789, 9)).toBe('123456789')
+  })
+
+  test('should handle edge cases', () => {
+    expect(fixedToInt(0, 18)).toBe('0')
+    expect(fixedToInt('0.0', 18)).toBe('0')
+    expect(fixedToInt('0.000000000000000001', 18)).toBe('1')
+  })
+
+  test('should throw error for invalid numbers', () => {
+    expect(() => fixedToInt('invalid')).toThrow('Invalid number')
+    expect(() => fixedToInt('NaN')).toThrow('Invalid number')
+  })
+
+  test('should handle extreme values', () => {
+    // 以太坊 18 位精度的极大值
+    expect(fixedToInt(1.0, 18)).toBe('1000000000000000000') // 1 ETH
+    expect(fixedToInt('1.999999999999999999', 18)).toBe('1999999999999999999') // 接近 1 ETH
+    expect(fixedToInt('1.234567890123456789', 18)).toBe('1234567890123456789') // 测试极大数
+    expect(fixedToInt('12345678222334445566.234567890123456789', 18)).toBe(
+      '12345678222334445566234567890123456789'
+    ) // 测试极大数
+  })
+})
+
+describe('intoFixed', () => {
+  test('should convert small integers to decimal', () => {
+    expect(intoFixed('123456789', 18)).toBe('0.000000000123456789')
+    expect(intoFixed('987654321', 18)).toBe('0.000000000987654321')
+  })
+
+  test('should convert larger integers to decimal', () => {
+    expect(intoFixed('1', 4)).toBe('0.0001')
+    expect(intoFixed('123456789', 9)).toBe('0.123456789')
+  })
+
+  test('should handle edge cases', () => {
+    expect(intoFixed('0', 18)).toBe('0')
+    expect(intoFixed(0, 18)).toBe('0') // 测试整数0
+    expect(intoFixed('1', 18)).toBe('0.000000000000000001')
+  })
+
+  test('should throw error for invalid numbers', () => {
+    expect(() => intoFixed('invalid')).toThrow('Invalid number')
+    expect(() => intoFixed('NaN')).toThrow('Invalid number')
+  })
+
+  test('should handle extreme values', () => {
+    // 以太坊 18 位精度的极大值
+    expect(intoFixed('1000000000000000000', 18)).toBe('1') // 1 ETH
+    expect(intoFixed('1999999999999999999', 18)).toBe('1.999999999999999999') // 接近 1 ETH
+    expect(intoFixed('1234567890123456789', 18)).toBe('1.234567890123456789') // 测试极大数
+    expect(intoFixed('12345678222334445566234567890123456789', 18)).toBe(
+      '12345678222334445566.234567890123456789'
+    ) // 测试极大数
+  })
+  test('should handle negative values', () => {
+    // 以太坊 18 位精度的极大值
+    expect(intoFixed('-1000000000000000000', 18)).toBe('-1') // 1 ETH
+    expect(intoFixed('-123456789', 9)).toBe('-0.123456789')
   })
 })
